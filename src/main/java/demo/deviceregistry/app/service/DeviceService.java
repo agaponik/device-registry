@@ -5,97 +5,141 @@ import demo.deviceregistry.app.dto.DeviceDto;
 import demo.deviceregistry.app.dto.DeviceSearchCriteriaDto;
 import demo.deviceregistry.app.dto.DeviceUpdateDto;
 import demo.deviceregistry.app.dto.PageResponseDto;
-import demo.deviceregistry.app.dto.DeviceState;
+import demo.deviceregistry.app.dto.DeviceDtoState;
+import demo.deviceregistry.app.entity.Device;
+import demo.deviceregistry.app.entity.DeviceState;
+import demo.deviceregistry.app.repository.DeviceRepository;
+import demo.deviceregistry.app.repository.DeviceSearchFilter;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.UUID;
 
+@Transactional
 @Service
 public class DeviceService {
 
-    private static final Instant SAMPLE_CREATION_TIME = Instant.parse("2026-04-23T12:00:00Z");
+    private final DeviceRepository deviceRepository;
 
+    public DeviceService(DeviceRepository deviceRepository) {
+        this.deviceRepository = deviceRepository;
+    }
+
+    /**
+     * Creates a new device with the given details and persists it.
+     * The device is initialized with a randomly generated ID, the current timestamp,
+     * and {@link DeviceState#AVAILABLE} as its initial state.
+     *
+     * @param deviceDto the data required to create the device
+     * @return the created device as a {@link DeviceDto}
+     */
     public DeviceDto create(DeviceCreateDto deviceDto) {
-        // TODO: replace with real implementation
-        return new DeviceDto(
+        Device device = new Device(
                 UUID.randomUUID().toString(),
                 deviceDto.name(),
                 deviceDto.brand(),
                 DeviceState.AVAILABLE,
                 Instant.now()
         );
+        Device saved = deviceRepository.save(device);
+        return toDeviceDto(saved);
     }
 
-    public DeviceDto getById(String id) {
-        // TODO: replace with real implementation
-        return new DeviceDto(
-                id,
-                "Warehouse Scanner",
-                "Zebra",
-                DeviceState.AVAILABLE,
-                SAMPLE_CREATION_TIME
-        );
+    /**
+     * Retrieves a device by its unique identifier.
+     *
+     * @param deviceId the unique ID of the device
+     * @return the matching device as a {@link DeviceDto}
+     * @throws java.util.NoSuchElementException if no device with the given ID exists
+     */
+    public DeviceDto getById(String deviceId) {
+        Device device = deviceRepository.findByDeviceId(deviceId)
+                .orElseThrow(() -> new NoSuchElementException("Device not found: " + deviceId));
+        return toDeviceDto(device);
     }
 
-    public DeviceDto update(String id, DeviceUpdateDto updateDto) {
-        // TODO: replace with real implementation
-        DeviceDto existing = getById(id);
-        return new DeviceDto(
-                id,
-                updateDto.name() != null ? updateDto.name() : existing.name(),
-                updateDto.brand() != null ? updateDto.brand() : existing.brand(),
-                existing.state(),
-                existing.creationTime()
-        );
+    /**
+     * Updates the name and/or brand of an existing device.
+     * Only non-null fields in the update DTO are applied.
+     *
+     * @param deviceId  the unique ID of the device to update
+     * @param updateDto the fields to update; {@code null} values are ignored
+     * @return the updated device as a {@link DeviceDto}
+     * @throws java.util.NoSuchElementException if no device with the given ID exists
+     */
+    public DeviceDto update(String deviceId, DeviceUpdateDto updateDto) {
+        Device device = deviceRepository.findByDeviceId(deviceId)
+                .orElseThrow(() -> new NoSuchElementException("Device not found: " + deviceId));
+        if (updateDto.name() != null) device.setName(updateDto.name());
+        if (updateDto.brand() != null) device.setBrand(updateDto.brand());
+        Device saved = deviceRepository.save(device);
+        return toDeviceDto(saved);
     }
 
-    public DeviceDto updateState(String id, DeviceState newState) {
-        // TODO: replace with real implementation
-        DeviceDto existing = getById(id);
-        return new DeviceDto(
-                id,
-                existing.name(),
-                existing.brand(),
-                newState,
-                existing.creationTime()
-        );
+    /**
+     * Updates the state of an existing device.
+     *
+     * @param deviceId the unique ID of the device
+     * @param newState the new state to assign to the device
+     * @return the updated device as a {@link DeviceDto}
+     * @throws java.util.NoSuchElementException if no device with the given ID exists
+     */
+    public DeviceDto updateState(String deviceId, DeviceDtoState newState) {
+        Device device = deviceRepository.findByDeviceId(deviceId)
+                .orElseThrow(() -> new NoSuchElementException("Device not found: " + deviceId));
+        device.setState(DeviceState.valueOf(newState.name()));
+        Device saved = deviceRepository.save(device);
+        return toDeviceDto(saved);
     }
 
+    /**
+     * Returns a paginated list of devices matching the given search criteria.
+     *
+     * @param criteria filters to apply (e.g. brand, state); {@code null} or empty criteria return all devices
+     * @param page     zero-based page index
+     * @param size     maximum number of devices per page
+     * @return a {@link PageResponseDto} containing the matching devices and pagination metadata
+     */
     public PageResponseDto<DeviceDto> list(DeviceSearchCriteriaDto criteria, int page, int size) {
-        // TODO: replace with real implementation
-        if (criteria.brand().isPresent()) {
-            String brand = criteria.brand().get();
-            List<DeviceDto> sample = List.of(
-                    new DeviceDto("1", "Warehouse Scanner", brand, DeviceState.AVAILABLE, SAMPLE_CREATION_TIME)
-            );
-            return toPage(sample, page, size);
-        }
-        if (criteria.state().isPresent()) {
-            DeviceState state = criteria.state().get();
-            List<DeviceDto> sample = List.of(
-                    new DeviceDto("1", "Warehouse Scanner", "Zebra", state, SAMPLE_CREATION_TIME)
-            );
-            return toPage(sample, page, size);
-        }
-        List<DeviceDto> sample = List.of(
-                new DeviceDto("1", "Warehouse Scanner", "Zebra", DeviceState.AVAILABLE, SAMPLE_CREATION_TIME),
-                new DeviceDto("2", "Handheld Terminal", "Honeywell", DeviceState.IN_USE, SAMPLE_CREATION_TIME)
-        );
-        return toPage(sample, page, size);
-    }
-
-    public void delete(String id) {
-        // TODO: replace with real implementation
-    }
-
-    private PageResponseDto<DeviceDto> toPage(List<DeviceDto> all, int page, int size) {
-        int total = all.size();
+        DeviceSearchFilter filter = toFilter(criteria);
+        int offset = page * size;
+        long total = deviceRepository.countByFilter(filter);
+        List<Device> devices = deviceRepository.findByFilter(filter, offset, size);
+        List<DeviceDto> dtos = devices.stream().map(this::toDeviceDto).toList();
         int totalPages = size > 0 ? (int) Math.ceil((double) total / size) : 0;
-        int fromIndex = Math.min(page * size, total);
-        int toIndex = Math.min(fromIndex + size, total);
-        List<DeviceDto> content = all.subList(fromIndex, toIndex);
-        return new PageResponseDto<>(content, page, size, total, totalPages);
+        return new PageResponseDto<>(dtos, page, size, total, totalPages);
+    }
+
+    /**
+     * Deletes the device with the given identifier.
+     *
+     * @param deviceId the unique ID of the device to delete
+     * @throws java.util.NoSuchElementException if no device with the given ID exists
+     */
+    public void delete(String deviceId) {
+        if (!deviceRepository.existsByDeviceId(deviceId)) {
+            throw new NoSuchElementException("Device not found: " + deviceId);
+        }
+        deviceRepository.deleteByDeviceId(deviceId);
+    }
+
+    private DeviceDto toDeviceDto(Device saved) {
+        return new DeviceDto(
+                saved.getDeviceId(),
+                saved.getName(),
+                saved.getBrand(),
+                DeviceDtoState.valueOf(saved.getState().name()),
+                saved.getCreationTime()
+        );
+    }
+
+    private DeviceSearchFilter toFilter(DeviceSearchCriteriaDto criteria) {
+        return new DeviceSearchFilter(
+                criteria.brand(),
+                criteria.state().map(s -> DeviceState.valueOf(s.name()))
+        );
     }
 }

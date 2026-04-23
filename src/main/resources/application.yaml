@@ -1,3 +1,13 @@
 spring:
   application:
     name: device-registry
+  datasource:
+    url: jdbc:postgresql://localhost:5432/device_registry
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql

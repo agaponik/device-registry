@@ -3,14 +3,14 @@ package demo.deviceregistry.app.dto;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
-public enum DeviceState {
+public enum DeviceDtoState {
     AVAILABLE("available"),
     IN_USE("in-use"),
     INACTIVE("inactive");
 
     private final String value;
 
-    DeviceState(String value) {
+    DeviceDtoState(String value) {
         this.value = value;
     }
 
@@ -20,8 +20,8 @@ public enum DeviceState {
     }
 
     @JsonCreator
-    public static DeviceState fromValue(String value) {
-        for (DeviceState state : values()) {
+    public static DeviceDtoState fromValue(String value) {
+        for (DeviceDtoState state : values()) {
             if (state.value.equalsIgnoreCase(value)) {
                 return state;
             }

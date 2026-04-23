@@ -30,7 +30,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/DeviceDto'
               example:
-                id: "550e8400-e29b-41d4-a716-446655440000"
+                deviceId: "550e8400-e29b-41d4-a716-446655440000"
                 name: "Warehouse Scanner"
                 brand: "Zebra"
                 state: "available"
@@ -62,12 +62,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/DevicePageResponse'
 
-  /api/device/{id}:
+  /api/device/{deviceId}:
     get:
       summary: Fetch a single device by ID
       operationId: getDeviceById
       parameters:
-        - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/deviceId'
       responses:
         '200':
           description: Device found
@@ -76,19 +76,23 @@ paths:
               schema:
                 $ref: '#/components/schemas/DeviceDto'
               example:
-                id: "550e8400-e29b-41d4-a716-446655440000"
+                deviceId: "550e8400-e29b-41d4-a716-446655440000"
                 name: "Warehouse Scanner"
                 brand: "Zebra"
                 state: "available"
                 creationTime: "2026-04-23T12:00:00Z"
         '404':
           description: Device not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
     patch:
       summary: Fully or partially update an existing device
       operationId: updateDevice
       parameters:
-        - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/deviceId'
       requestBody:
         required: true
         content:
@@ -107,24 +111,32 @@ paths:
                 $ref: '#/components/schemas/DeviceDto'
         '404':
           description: Device not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
     delete:
       summary: Delete a single device by ID
       operationId: deleteDevice
       parameters:
-        - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/deviceId'
       responses:
         '204':
           description: Device deleted successfully
         '404':
           description: Device not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
-  /api/device/{id}/state/{newState}:
+  /api/device/{deviceId}/state/{newState}:
     post:
       summary: Update the state of a device
       operationId: updateDeviceState
       parameters:
-        - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/deviceId'
         - name: newState
           in: path
           required: true
@@ -139,11 +151,15 @@ paths:
                 $ref: '#/components/schemas/DeviceDto'
         '404':
           description: Device not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
 components:
   parameters:
-    id:
-      name: id
+    deviceId:
+      name: deviceId
       in: path
       required: true
       description: UUID of the device
@@ -195,7 +211,7 @@ components:
     DeviceDto:
       type: object
       properties:
-        id:
+        deviceId:
           type: string
           format: uuid
           nullable: true
@@ -225,6 +241,13 @@ components:
           type: string
           nullable: true
           description: Updated brand of the device
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message describing what went wrong
 
     DevicePageResponse:
       type: object

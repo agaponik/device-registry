@@ -4,7 +4,7 @@ import java.util.Optional;
 
 public record DeviceSearchCriteriaDto(
         Optional<String> brand,
-        Optional<DeviceState> state
+        Optional<DeviceDtoState> state
 ) {
 }
 
