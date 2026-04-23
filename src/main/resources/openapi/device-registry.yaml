@@ -1,0 +1,249 @@
+openapi: 3.0.3
+info:
+  title: Device Registry API
+  description: REST API for managing devices in the device registry.
+  version: 0.0.1
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /api/device:
+    post:
+      summary: Create a new device
+      operationId: createDevice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceCreateDto'
+            example:
+              name: "Warehouse Scanner"
+              brand: "Zebra"
+      responses:
+        '201':
+          description: Device created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceDto'
+              example:
+                id: "550e8400-e29b-41d4-a716-446655440000"
+                name: "Warehouse Scanner"
+                brand: "Zebra"
+                state: "available"
+                creationTime: "2026-04-23T12:00:00Z"
+
+  /api/device/list:
+    get:
+      summary: List devices with optional filtering
+      operationId: listDevices
+      parameters:
+        - name: brand
+          in: query
+          required: false
+          schema:
+            type: string
+          example: "Zebra"
+        - name: state
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/DeviceState'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/size'
+      responses:
+        '200':
+          description: Paginated list of devices
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DevicePageResponse'
+
+  /api/device/{id}:
+    get:
+      summary: Fetch a single device by ID
+      operationId: getDeviceById
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Device found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceDto'
+              example:
+                id: "550e8400-e29b-41d4-a716-446655440000"
+                name: "Warehouse Scanner"
+                brand: "Zebra"
+                state: "available"
+                creationTime: "2026-04-23T12:00:00Z"
+        '404':
+          description: Device not found
+
+    patch:
+      summary: Fully or partially update an existing device
+      operationId: updateDevice
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceUpdateDto'
+            example:
+              name: "Updated Scanner"
+              brand: "Honeywell"
+      responses:
+        '200':
+          description: Device updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceDto'
+        '404':
+          description: Device not found
+
+    delete:
+      summary: Delete a single device by ID
+      operationId: deleteDevice
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: Device deleted successfully
+        '404':
+          description: Device not found
+
+  /api/device/{id}/state/{newState}:
+    post:
+      summary: Update the state of a device
+      operationId: updateDeviceState
+      parameters:
+        - $ref: '#/components/parameters/id'
+        - name: newState
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/DeviceState'
+      responses:
+        '200':
+          description: Device state updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceDto'
+        '404':
+          description: Device not found
+
+components:
+  parameters:
+    id:
+      name: id
+      in: path
+      required: true
+      description: UUID of the device
+      schema:
+        type: string
+        format: uuid
+      example: "550e8400-e29b-41d4-a716-446655440000"
+    page:
+      name: page
+      in: query
+      required: false
+      description: Zero-based page index
+      schema:
+        type: integer
+        default: 0
+        minimum: 0
+    size:
+      name: size
+      in: query
+      required: false
+      description: Number of items per page
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+
+  schemas:
+    DeviceState:
+      type: string
+      enum:
+        - available
+        - in-use
+        - inactive
+      description: The state of a device
+
+    DeviceCreateDto:
+      type: object
+      required:
+        - name
+        - brand
+      properties:
+        name:
+          type: string
+          description: Name of the device
+        brand:
+          type: string
+          description: Brand/manufacturer of the device
+
+    DeviceDto:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Unique identifier of the device (assigned on creation)
+        name:
+          type: string
+          description: Name of the device
+        brand:
+          type: string
+          description: Brand/manufacturer of the device
+        state:
+          $ref: '#/components/schemas/DeviceState'
+        creationTime:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp when the device was created (assigned on creation)
+
+    DeviceUpdateDto:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+          description: Updated name of the device
+        brand:
+          type: string
+          nullable: true
+          description: Updated brand of the device
+
+    DevicePageResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceDto'
+        page:
+          type: integer
+          description: Current page index (zero-based)
+        size:
+          type: integer
+          description: Number of items per page
+        totalElements:
+          type: integer
+          format: int64
+          description: Total number of elements across all pages
+        totalPages:
+          type: integer
+          description: Total number of pages
+
