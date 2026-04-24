@@ -1,6 +1,29 @@
 version: '3.8'
 
 services:
+  device-registry:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: device-registry-app
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/device_registry
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+    ports:
+      - "8080:8080"
+    networks:
+      - device-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q '\"status\":\"UP\"' || exit 1"]
+      interval: 3s
+      timeout: 10s
+      retries: 10
+      start_period: 10s
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   postgres:
     image: postgres:18-alpine
     container_name: device-registry-postgres
