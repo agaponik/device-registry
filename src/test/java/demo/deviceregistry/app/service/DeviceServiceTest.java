@@ -139,6 +139,18 @@ class DeviceServiceTest {
                 .hasMessageContaining(DEVICE_ID);
     }
 
+    @Test
+    void update_shouldThrowWhenDeviceIsInUse() {
+        device.setState(DeviceState.IN_USE);
+        when(deviceRepository.findByDeviceId(DEVICE_ID)).thenReturn(Optional.of(device));
+
+        assertThatThrownBy(() -> deviceService.update(DEVICE_ID, new DeviceUpdateDto("New Name", "New Brand")))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(DEVICE_ID);
+
+        verify(deviceRepository, never()).save(any());
+    }
+
     // --- updateState ---
 
     @Test
@@ -208,7 +220,7 @@ class DeviceServiceTest {
 
     @Test
     void delete_shouldCallRepositoryDelete() {
-        when(deviceRepository.existsByDeviceId(DEVICE_ID)).thenReturn(true);
+        when(deviceRepository.findByDeviceId(DEVICE_ID)).thenReturn(Optional.of(device));
 
         deviceService.delete(DEVICE_ID);
 
@@ -217,10 +229,22 @@ class DeviceServiceTest {
 
     @Test
     void delete_shouldThrowWhenNotFound() {
-        when(deviceRepository.existsByDeviceId(DEVICE_ID)).thenReturn(false);
+        when(deviceRepository.findByDeviceId(DEVICE_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> deviceService.delete(DEVICE_ID))
                 .isInstanceOf(NoSuchElementException.class)
+                .hasMessageContaining(DEVICE_ID);
+
+        verify(deviceRepository, never()).deleteByDeviceId(any());
+    }
+
+    @Test
+    void delete_shouldThrowWhenDeviceIsInUse() {
+        device.setState(DeviceState.IN_USE);
+        when(deviceRepository.findByDeviceId(DEVICE_ID)).thenReturn(Optional.of(device));
+
+        assertThatThrownBy(() -> deviceService.delete(DEVICE_ID))
+                .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(DEVICE_ID);
 
         verify(deviceRepository, never()).deleteByDeviceId(any());

@@ -115,6 +115,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Device cannot be updated because it is currently in use
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Device cannot be updated while it is in use: 550e8400-e29b-41d4-a716-446655440000"
 
     delete:
       summary: Delete a single device by ID
@@ -130,6 +138,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Device cannot be deleted because it is currently in use
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Device cannot be deleted while it is in use: 550e8400-e29b-41d4-a716-446655440000"
 
   /api/device/{deviceId}/state/{newState}:
     post:

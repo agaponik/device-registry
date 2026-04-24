@@ -69,10 +69,14 @@ public class DeviceService {
      * @param updateDto the fields to update; {@code null} values are ignored
      * @return the updated device as a {@link DeviceDto}
      * @throws java.util.NoSuchElementException if no device with the given ID exists
+     * @throws IllegalStateException            if the device is currently in use
      */
     public DeviceDto update(String deviceId, DeviceUpdateDto updateDto) {
         Device device = deviceRepository.findByDeviceId(deviceId)
                 .orElseThrow(() -> new NoSuchElementException("Device not found: " + deviceId));
+        if (DeviceState.IN_USE.equals(device.getState())) {
+            throw new IllegalStateException("Device cannot be updated while it is in use: " + deviceId);
+        }
         if (updateDto.name() != null) device.setName(updateDto.name());
         if (updateDto.brand() != null) device.setBrand(updateDto.brand());
         Device saved = deviceRepository.save(device);
@@ -118,10 +122,13 @@ public class DeviceService {
      *
      * @param deviceId the unique ID of the device to delete
      * @throws java.util.NoSuchElementException if no device with the given ID exists
+     * @throws IllegalStateException            if the device is currently in use
      */
     public void delete(String deviceId) {
-        if (!deviceRepository.existsByDeviceId(deviceId)) {
-            throw new NoSuchElementException("Device not found: " + deviceId);
+        Device device = deviceRepository.findByDeviceId(deviceId)
+                .orElseThrow(() -> new NoSuchElementException("Device not found: " + deviceId));
+        if (DeviceState.IN_USE.equals(device.getState())) {
+            throw new IllegalStateException("Device cannot be deleted while it is in use: " + deviceId);
         }
         deviceRepository.deleteByDeviceId(deviceId);
     }

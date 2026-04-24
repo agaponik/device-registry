@@ -218,4 +218,25 @@ class DeviceRestControllerTest {
         mockMvc.perform(delete("/api/device/" + DEVICE_ID_1))
                 .andExpect(status().isNoContent());
     }
+
+    @Test
+    void shouldReturn409WhenUpdatingDeviceInUse() throws Exception {
+        mockMvc.perform(patch("/api/device/" + DEVICE_ID_2)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "New Name",
+                                  "brand": "New Brand"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("Device cannot be updated while it is in use: " + DEVICE_ID_2));
+    }
+
+    @Test
+    void shouldReturn409WhenDeletingDeviceInUse() throws Exception {
+        mockMvc.perform(delete("/api/device/" + DEVICE_ID_2))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("Device cannot be deleted while it is in use: " + DEVICE_ID_2));
+    }
 }
