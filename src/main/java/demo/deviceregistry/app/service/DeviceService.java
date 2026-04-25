@@ -10,6 +10,8 @@ import demo.deviceregistry.app.entity.Device;
 import demo.deviceregistry.app.entity.DeviceState;
 import demo.deviceregistry.app.repository.DeviceRepository;
 import demo.deviceregistry.app.repository.DeviceSearchFilter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +23,8 @@ import java.util.UUID;
 @Transactional
 @Service
 public class DeviceService {
+
+    private static final Logger log = LoggerFactory.getLogger(DeviceService.class);
 
     private final DeviceRepository deviceRepository;
 
@@ -57,7 +61,10 @@ public class DeviceService {
      */
     public DeviceDto getById(String deviceId) {
         Device device = deviceRepository.findByDeviceId(deviceId)
-                .orElseThrow(() -> new NoSuchElementException("Device not found: " + deviceId));
+                .orElseThrow(() -> {
+                    log.warn("Device not found: {}", deviceId);
+                    return new NoSuchElementException("Device not found: " + deviceId);
+                });
         return toDeviceDto(device);
     }
 
@@ -73,8 +80,12 @@ public class DeviceService {
      */
     public DeviceDto update(String deviceId, DeviceUpdateDto updateDto) {
         Device device = deviceRepository.findByDeviceId(deviceId)
-                .orElseThrow(() -> new NoSuchElementException("Device not found: " + deviceId));
+                .orElseThrow(() -> {
+                    log.warn("Device not found: {}", deviceId);
+                    return new NoSuchElementException("Device not found: " + deviceId);
+                });
         if (DeviceState.IN_USE.equals(device.getState())) {
+            log.warn("Device cannot be updated while it is in use: {}", deviceId);
             throw new IllegalStateException("Device cannot be updated while it is in use: " + deviceId);
         }
         if (updateDto.name() != null) device.setName(updateDto.name());
@@ -93,7 +104,10 @@ public class DeviceService {
      */
     public DeviceDto updateState(String deviceId, DeviceDtoState newState) {
         Device device = deviceRepository.findByDeviceId(deviceId)
-                .orElseThrow(() -> new NoSuchElementException("Device not found: " + deviceId));
+                .orElseThrow(() -> {
+                    log.warn("Device not found: {}", deviceId);
+                    return new NoSuchElementException("Device not found: " + deviceId);
+                });
         device.setState(DeviceState.valueOf(newState.name()));
         Device saved = deviceRepository.save(device);
         return toDeviceDto(saved);
@@ -126,8 +140,12 @@ public class DeviceService {
      */
     public void delete(String deviceId) {
         Device device = deviceRepository.findByDeviceId(deviceId)
-                .orElseThrow(() -> new NoSuchElementException("Device not found: " + deviceId));
+                .orElseThrow(() -> {
+                    log.warn("Device not found: {}", deviceId);
+                    return new NoSuchElementException("Device not found: " + deviceId);
+                });
         if (DeviceState.IN_USE.equals(device.getState())) {
+            log.warn("Device cannot be deleted while it is in use: {}", deviceId);
             throw new IllegalStateException("Device cannot be deleted while it is in use: " + deviceId);
         }
         deviceRepository.deleteByDeviceId(deviceId);
